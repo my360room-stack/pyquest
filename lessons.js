@@ -129,5 +129,61 @@ window.COURSE = [
       { t: "mc", q: "Qu'affiche ce code ?", code: 'd = {"a": 1}\nprint(d.get("z", 0))', a: ["0", "None", "Erreur", "z"], c: 0, why: "get() renvoie la valeur par défaut si la clé n'existe pas." },
       { t: "type", q: "Qu'affiche ce code ? Tape le résultat.", code: 'notes = {"maths": 14, "info": 18}\nprint(notes["info"] - notes["maths"])', ans: ["4"] }
     ]
+  },
+  {
+    title: "Erreurs", icon: "🛟", color: "#f97316",
+    tip: "Les erreurs les plus courantes :<br><b>NameError</b> variable inconnue · <b>TypeError</b> mauvais type (\"a\" + 1)<br><b>ValueError</b> valeur invalide (int(\"abc\")) · <b>IndexError</b> indice hors liste<br><b>KeyError</b> clé absente · <b>ZeroDivisionError</b> division par 0<br><br>On les attrape avec :<br><code>try:</code> code risqué<br><code>except ValueError:</code> plan B",
+    ex: [
+      { t: "mc", q: "Quelle erreur provoque ce code ?", code: "print(10 / 0)", a: ["ZeroDivisionError", "ValueError", "TypeError", "Aucune erreur"], c: 0, why: "Diviser par zéro est impossible." },
+      { t: "mc", q: "Quelle erreur provoque ce code ?", code: "nums = [1, 2, 3]\nprint(nums[5])", a: ["IndexError", "KeyError", "ValueError", "NameError"], c: 0, why: "La liste n'a que les indices 0, 1 et 2." },
+      { t: "mc", q: "Quelle erreur provoque ce code ?", code: 'print("Age : " + 12)', a: ["TypeError", "NameError", "ValueError", "SyntaxError"], c: 0, why: "On ne peut pas coller un texte et un nombre. Il faut écrire str(12)." },
+      { t: "mc", q: "Quelle erreur provoque ce code ?", code: "score = 5\nprint(scor)", a: ["NameError", "TypeError", "IndexError", "Aucune erreur"], c: 0, why: "La variable scor n'existe pas : c'est une faute de frappe." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: 'try:\n    x = int("abc")\nexcept ValueError:\n    x = 0\nprint(x)', a: ["0", "abc", "Erreur", "None"], c: 0, why: "int(\"abc\") échoue, donc on passe dans le except qui met x à 0." },
+      { t: "fill", q: "Complète pour attraper l'erreur", code: '___:\n    print(1 / 0)\n___ ZeroDivisionError:\n    print("Impossible")', bank: ["try", "except", "catch", "error", "if"], ans: ["try", "except"] },
+      { t: "mc", q: "Qu'affiche ce code ?", code: 'try:\n    print("A")\nexcept:\n    print("B")\nprint("C")', a: ["A\nC", "A\nB\nC", "B\nC", "A"], c: 0, why: "Aucune erreur dans le try : le except est sauté." },
+      { t: "type", q: "Écris l'expression qui transforme le nombre 12 en texte", ans: ["str(12)"], hint: "str(...)" }
+    ]
+  },
+  {
+    title: "Listes avancées", icon: "✨", color: "#65a30d",
+    tip: "<b>Compréhension de liste</b> :<br><code>[x * 2 for x in nums]</code> → chaque élément doublé<br><code>[x for x in nums if x &gt; 0]</code> → avec un filtre<br><br><code>nums[1:3]</code> une tranche · <code>3 in nums</code> test<br><code>enumerate(liste)</code> donne (indice, valeur)<br>Un <b>tuple</b> <code>(1, 2)</code> est une liste non modifiable.",
+    ex: [
+      { t: "mc", q: "Qu'affiche ce code ?", code: "nums = [1, 2, 3]\nprint([x * 2 for x in nums])", a: ["[2, 4, 6]", "[1, 2, 3, 1, 2, 3]", "12", "Erreur"], c: 0, why: "La compréhension applique x * 2 à chaque élément." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: "print([x for x in range(6) if x % 2 == 0])", a: ["[0, 2, 4]", "[2, 4, 6]", "[1, 3, 5]", "[0, 2, 4, 6]"], c: 0, why: "range(6) va de 0 à 5, et on garde les nombres pairs." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: 'lettres = ["a", "b", "c", "d"]\nprint(lettres[1:3])', a: ["['b', 'c']", "['a', 'b', 'c']", "['b', 'c', 'd']", "['a', 'b']"], c: 0, why: "[1:3] prend les indices 1 et 2." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: "print(3 in [1, 2, 3])", a: ["True", "False", "3", "2"], c: 0, why: "in vérifie si la valeur est dans la liste." },
+      { t: "mc", q: "Quelle est la différence entre une liste et un tuple ?", a: ["Un tuple ne peut pas être modifié", "Un tuple ne contient que des nombres", "Un tuple n'a pas d'indices", "Aucune différence"], c: 0, why: "Un tuple est figé : pas d'append, pas de modification." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: 'for i, f in enumerate(["kiwi", "pomme"]):\n    print(i, f)', a: ["0 kiwi\n1 pomme", "1 kiwi\n2 pomme", "kiwi\npomme", "0\n1"], c: 0, why: "enumerate donne l'indice (à partir de 0) et la valeur." },
+      { t: "fill", q: "Complète pour créer la liste des carrés", code: "carres = [n * n ___ n ___ range(4)]", bank: ["for", "in", "if", "while", "of"], ans: ["for", "in"] },
+      { t: "mc", q: "Qu'affiche ce code ?", code: "print(sorted([3, 1, 2], reverse=True))", a: ["[3, 2, 1]", "[1, 2, 3]", "[3, 1, 2]", "None"], c: 0, why: "reverse=True trie dans l'ordre décroissant." }
+    ]
+  },
+  {
+    title: "Modules", icon: "🧰", color: "#0284c7",
+    tip: "Un <b>module</b> apporte des outils prêts à l'emploi :<br><code>import math</code> puis <code>math.sqrt(16)</code><br><code>from random import randint</code> puis <code>randint(1, 6)</code><br><code>random.choice(liste)</code> élément au hasard<br><br>Sans import : <code>round(3.14159, 2)</code>, <code>abs(-7)</code>",
+    ex: [
+      { t: "mc", q: "Quelle ligne charge le module math ?", a: ["import math", "include math", "using math", 'require("math")'], c: 0, mono: true, why: "En Python, on charge un module avec import." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: "import math\nprint(math.sqrt(16))", a: ["4.0", "4", "16", "8.0"], c: 0, why: "sqrt (racine carrée) renvoie toujours un float." },
+      { t: "mc", q: "Quelles valeurs n peut-il prendre ?", code: "from random import randint\nn = randint(1, 6)", a: ["Un entier de 1 à 6 (6 inclus)", "Un entier de 1 à 5", "Un décimal entre 1 et 6", "Toujours 1"], c: 0, why: "randint inclut les deux bornes, comme un dé." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: "print(round(3.14159, 2))", a: ["3.14", "3.1", "3", "3.142"], c: 0, why: "round(x, 2) garde 2 chiffres après la virgule." },
+      { t: "fill", q: "Complète pour importer seulement pi", code: "___ math ___ pi\nprint(pi)", bank: ["from", "import", "as", "use"], ans: ["from", "import"] },
+      { t: "mc", q: "Qu'affiche ce code ?", code: "import math\nprint(math.floor(4.7))", a: ["4", "5", "4.7", "4.0"], c: 0, why: "floor arrondit vers le bas et renvoie un entier." },
+      { t: "mc", q: 'Que fait random.choice(["pile", "face"]) ?', a: ["Il choisit un élément au hasard", "Il renvoie toujours \"pile\"", "Il mélange la liste", "Il renvoie la taille de la liste"], c: 0, why: "choice tire un élément au hasard dans la liste." },
+      { t: "type", q: "Qu'affiche ce code ? Tape le résultat.", code: "print(abs(-7))", ans: ["7"] }
+    ]
+  },
+  {
+    title: "Objets & classes", icon: "🏗️", color: "#9333ea",
+    tip: "Une <b>classe</b> est un plan pour fabriquer des objets :<br><code>class Chien:</code><br><code>&nbsp;&nbsp;&nbsp;&nbsp;def __init__(self, nom):</code><br><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.nom = nom</code><br><br><code>rex = Chien(\"Rex\")</code> crée un objet<br><code>rex.nom</code> → \"Rex\"<br><b>self</b> désigne l'objet lui-même.",
+    ex: [
+      { t: "mc", q: "Quel mot-clé crée une classe ?", a: ["class", "object", "struct", "def"], c: 0, mono: true, why: "class définit un nouveau type d'objet." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: 'class Chat:\n    def __init__(self, nom):\n        self.nom = nom\n\nc = Chat("Mimi")\nprint(c.nom)', a: ["Mimi", "nom", "Chat", "self.nom"], c: 0, why: "__init__ a rangé \"Mimi\" dans self.nom." },
+      { t: "mc", q: "À quoi sert __init__ ?", a: ["À initialiser l'objet quand on le crée", "À supprimer l'objet", "À afficher l'objet", "À importer la classe"], c: 0, why: "__init__ s'exécute automatiquement à la création." },
+      { t: "mc", q: "Qu'affiche ce code ?", code: "class Compteur:\n    def __init__(self):\n        self.n = 0\n    def plus(self):\n        self.n = self.n + 1\n\nc = Compteur()\nc.plus()\nc.plus()\nprint(c.n)", a: ["2", "0", "1", "Erreur"], c: 0, why: "On part de 0 et on appelle plus() deux fois." },
+      { t: "fill", q: "Complète la méthode", code: 'class Chien:\n    def aboyer(___):\n        print("Wouf")', bank: ["self", "this", "me", "chien"], ans: ["self"] },
+      { t: "mc", q: "Qu'affiche ce code ?", code: "class Rect:\n    def __init__(self, l, h):\n        self.l = l\n        self.h = h\n    def aire(self):\n        return self.l * self.h\n\nr = Rect(3, 5)\nprint(r.aire())", a: ["15", "8", "35", "Erreur"], c: 0, why: "aire() renvoie 3 × 5." },
+      { t: "mc", q: "Dans r = Rect(3, 5), qu'est-ce que r ?", a: ["Un objet (une instance) de Rect", "Une fonction", "Une liste", "Le nom de la classe"], c: 0, why: "Appeler la classe fabrique un objet." },
+      { t: "order", q: "Remets dans l'ordre pour afficher « Cui cui »", lines: ["class Oiseau:", "    def chanter(self):", '        print("Cui cui")', "o = Oiseau()", "o.chanter()"] }
+    ]
   }
 ];

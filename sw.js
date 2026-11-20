@@ -8,7 +8,7 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
-// RÃ©seau d'abord (pour recevoir les mises Ã  jour), cache si hors ligne.
+// Réseau d'abord (pour recevoir les mises à jour), cache si hors ligne.
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   e.respondWith(

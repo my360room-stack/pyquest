@@ -183,6 +183,162 @@ function renderPractice() {
   $$("[data-tip2]").forEach(b => b.onclick = () => { const u = COURSE[+b.dataset.tip2]; openSheet(`<h2>${u.icon} ${u.title}</h2><div class="tipbody">${u.tip}</div><button class="btn" id="close-sheet">Fermer</button>`); $("#close-sheet").onclick = closeSheet; });
 }
 
+/* ---------------- comptes & classement (Supabase) ---------------- */
+const CFG = window.PYQ_CONFIG || {};
+let sb = null, user = null, profile = null;
+try { if (CFG.url && CFG.key && window.supabase) sb = window.supabase.createClient(CFG.url, CFG.key); } catch {}
+const ERRS = [
+  [/invalid login/i, "E-mail ou mot de passe incorrect."],
+  [/already registered|already exists/i, "Un compte existe déjà avec cet e-mail."],
+  [/password/i, "Le mot de passe doit faire au moins 6 caractères."],
+  [/valid email|email.*invalid|invalid.*email/i, "Adresse e-mail invalide."],
+  [/rate limit|too many/i, "Trop d'essais, réessaie dans quelques minutes."],
+  [/fetch|network|load failed/i, "Pas de connexion internet."]
+];
+const frErr = (e) => { const m = (e && e.message) || String(e); const f = ERRS.find(([re]) => re.test(m)); return f ? f[1] : m; };
+const PSEUDO_RE = /^[A-Za-z0-9_-]{3,20}$/;
+
+async function loadAccount() {
+  if (!sb) return;
+  const { data } = await sb.auth.getSession();
+  user = (data.session && data.session.user) || null;
+  profile = null;
+  if (!user) return;
+  const { data: p } = await sb.from("profiles").select("pseudo").eq("id", user.id).maybeSingle();
+  profile = p || null;
+}
+// preferRemote = true à la connexion (la progression du compte remplace celle du téléphone)
+async function pullProgress(preferRemote) {
+  const { data, error } = await sb.from("progress").select("state").eq("user_id", user.id).maybeSingle();
+  if (error) throw error;
+  if (data && data.state) {
+    const remote = Object.assign(defaults(), data.state);
+    if (preferRemote) S = remote;
+    else {
+      const base = remote.xp >= S.xp ? remote : S;
+      base.done = Object.assign({}, remote.done, S.done);
+      base.days = [...new Set([...(remote.days || []), ...(S.days || [])])].sort().slice(-60);
+      base.best = Math.max(remote.best || 0, S.best || 0);
+      base.pendingXp = S.pendingXp || 0;
+      S = base;
+    }
+    save();
+  }
+  await pushProgress();
+}
+async function pushProgress() {
+  if (!sb || !user) return;
+  try { await sb.from("progress").upsert({ user_id: user.id, state: S, updated_at: new Date().toISOString() }); } catch {}
+}
+async function flushXp() {
+  if (!sb || !user || !profile || !(S.pendingXp > 0)) return;
+  const amount = Math.min(S.pendingXp, 60);
+  try { const { error } = await sb.rpc("add_xp", { amount }); if (!error) { S.pendingXp -= amount; save(); } } catch {}
+}
+async function syncNow() { await flushXp(); await pushProgress(); }
+
+function authSheet(mode) {
+  const su = mode === "signup";
+  openSheet(`<h2>${su ? "✨ Créer un compte" : "👋 Se connecter"}</h2>
+    <p class="muted">${su ? "Ta progression sera sauvegardée et tu apparaîtras dans le classement." : "Retrouve ta progression sur cet appareil."}</p>
+    <form class="form" id="af" novalidate>
+      ${su ? `<label>Pseudo (visible dans le classement)<input name="pseudo" maxlength="20" autocomplete="nickname" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="ex : Python_Master"></label>` : ""}
+      <label>E-mail<input name="email" type="email" autocomplete="email" autocapitalize="off" spellcheck="false"></label>
+      <label>Mot de passe<input name="pw" type="password" autocomplete="${su ? "new-password" : "current-password"}" placeholder="${su ? "6 caractères minimum" : ""}"></label>
+      <div class="ferr" id="ferr"></div>
+      <button class="btn green" id="asub">${su ? "Créer mon compte" : "Me connecter"}</button>
+    </form>
+    <button class="btn ghost" id="aswitch" style="margin-top:10px">${su ? "J'ai déjà un compte" : "Je n'ai pas de compte"}</button>`);
+  $("#aswitch").onclick = () => authSheet(su ? "login" : "signup");
+  $("#af").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target), btn = $("#asub"), err = $("#ferr");
+    const email = String(f.get("email") || "").trim(), pw = String(f.get("pw") || "");
+    const pseudo = su ? String(f.get("pseudo") || "").trim() : "";
+    if (su && !PSEUDO_RE.test(pseudo)) { err.textContent = "Pseudo : 3 à 20 caractères, lettres, chiffres, _ ou - (sans espace ni accent)."; return; }
+    if (!/^\S+@\S+\.\S+$/.test(email)) { err.textContent = "Adresse e-mail invalide."; return; }
+    if (pw.length < 6) { err.textContent = "Le mot de passe doit faire au moins 6 caractères."; return; }
+    btn.disabled = true; err.textContent = "";
+    try {
+      if (su) {
+        const { data: taken } = await sb.from("profiles").select("id").ilike("pseudo", pseudo.replace(/[_%\\]/g, "\\$&")).maybeSingle();
+        if (taken) throw new Error("Ce pseudo est déjà pris, choisis-en un autre.");
+        const { data, error } = await sb.auth.signUp({ email, password: pw });
+        if (error) throw error;
+        if (!data.session) throw new Error("Compte créé : confirme ton e-mail, puis connecte-toi.");
+        user = data.user;
+        const { error: e2 } = await sb.from("profiles").insert({ id: user.id, pseudo });
+        if (e2) { closeSheet(); return pseudoSheet("Ce pseudo vient d'être pris, choisis-en un autre."); }
+        profile = { pseudo };
+        S.pendingXp = (S.pendingXp || 0) + S.daily.xp; // l'XP gagné aujourd'hui compte déjà
+        save();
+        await syncNow();
+        closeSheet(); renderAll(); toast(`Bienvenue ${pseudo} ! 🎉`);
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+        if (error) throw error;
+        await loadAccount();
+        await pullProgress(true);
+        closeSheet(); renderAll();
+        if (!profile) pseudoSheet(); else toast(`Content de te revoir, ${profile.pseudo} !`);
+      }
+    } catch (ex) { err.textContent = frErr(ex); btn.disabled = false; }
+  };
+}
+function pseudoSheet(msg) {
+  openSheet(`<h2>Choisis ton pseudo</h2><p class="muted">${esc(msg || "Il sera affiché dans le classement.")}</p>
+    <form class="form" id="pf" novalidate><label>Pseudo<input name="pseudo" maxlength="20" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+    <div class="ferr" id="ferr"></div><button class="btn green" id="psub">Valider</button></form>`);
+  $("#pf").onsubmit = async (e) => {
+    e.preventDefault();
+    const pseudo = String(new FormData(e.target).get("pseudo") || "").trim(), err = $("#ferr");
+    if (!PSEUDO_RE.test(pseudo)) { err.textContent = "3 à 20 caractères : lettres, chiffres, _ ou -."; return; }
+    $("#psub").disabled = true;
+    const { error } = await sb.from("profiles").insert({ id: user.id, pseudo });
+    if (error) { err.textContent = /duplicate|unique/i.test(error.message) ? "Ce pseudo est déjà pris." : frErr(error); $("#psub").disabled = false; return; }
+    profile = { pseudo }; await syncNow(); closeSheet(); renderAll(); toast(`Bienvenue ${pseudo} ! 🎉`);
+  };
+}
+async function logout() {
+  openSheet(`<h2>Se déconnecter ?</h2><p class="muted">Ta progression reste sauvegardée dans ton compte. Ce téléphone repartira de zéro jusqu'à ta prochaine connexion.</p>
+    <button class="btn red" id="yes">Me déconnecter</button><button class="btn ghost" id="no" style="margin-top:10px">Annuler</button>`);
+  $("#no").onclick = closeSheet;
+  $("#yes").onclick = async () => {
+    await pushProgress();
+    try { await sb.auth.signOut(); } catch {}
+    user = null; profile = null; S = defaults(); save(); closeSheet(); renderAll(); toast("Déconnecté");
+  };
+}
+
+const AV_COLORS = ["#2563eb", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#6366f1"];
+const avColor = (s) => AV_COLORS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_COLORS.length];
+async function renderBoard() {
+  const v = $("#v-board");
+  const dow = (new Date().getDay() + 6) % 7, days = 7 - dow;
+  const head = `<div class="panel" style="text-align:center"><div style="font-size:46px;line-height:1">🏆</div><h3 style="margin:8px 0 4px">Classement de la semaine</h3>
+    <p class="muted">Gagne de l'XP pour grimper ! Remise à zéro lundi${days === 1 ? " (demain)" : ` (dans ${days} jours)`}.</p></div>`;
+  if (!sb) { v.innerHTML = head + `<div class="panel"><p class="muted">Le classement n'est pas disponible pour l'instant (pas de connexion internet ?).</p></div>`; return; }
+  const cta = user && profile ? "" : `<div class="panel" style="text-align:center"><p class="muted" style="margin-bottom:12px">Crée un compte gratuit pour entrer dans le classement et retrouver ta progression sur tous tes appareils.</p>
+    <button class="btn green" id="b-su">Créer un compte</button><button class="btn ghost" id="b-li" style="margin-top:10px">J'ai déjà un compte</button></div>`;
+  v.innerHTML = head + cta + `<div class="panel" id="lb"><p class="muted">Chargement…</p></div>`;
+  const su = $("#b-su"); if (su) { su.onclick = () => authSheet("signup"); $("#b-li").onclick = () => authSheet("login"); }
+  await flushXp();
+  let rows;
+  try { const { data, error } = await sb.rpc("leaderboard"); if (error) throw error; rows = data || []; }
+  catch (e) { if ($("#lb")) $("#lb").innerHTML = `<p class="muted">Impossible de charger le classement : ${esc(frErr(e))}</p>`; return; }
+  if (!$("#lb")) return;
+  if (!rows.length) { $("#lb").innerHTML = `<p class="muted" style="text-align:center">Personne n'a encore gagné d'XP cette semaine.<br>Fais une leçon pour prendre la 1re place ! 🚀</p>`; return; }
+  const medal = { 1: "🥇", 2: "🥈", 3: "🥉" };
+  let prev = 0;
+  $("#lb").innerHTML = rows.map(r => {
+    const gap = r.rk > prev + 1 && prev ? `<div class="lb-gap">⋮</div>` : "";
+    prev = Number(r.rk);
+    return gap + `<div class="lb-row ${r.is_me ? "me" : ""}"><div class="rk">${medal[r.rk] || r.rk}</div>
+      <div class="av" style="background:${avColor(r.pseudo)}">${esc(r.pseudo[0].toUpperCase())}</div>
+      <div class="nm">${esc(r.pseudo)}${r.is_me ? " (toi)" : ""}</div><div class="pts">${r.xp} XP</div></div>`;
+  }).join("");
+}
+
 /* ---------------- vue Profil ---------------- */
 let installEvt = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if ($("#v-profile").hidden === false) renderProfile(); });
@@ -201,7 +357,15 @@ function renderProfile() {
       : ios ? `<p style="margin:0;font-weight:600;color:var(--muted)">Dans Safari : touche <b>Partager</b> <span style="font-size:18px">⎋</span> puis <b>« Sur l'écran d'accueil »</b>.</p>`
             : `<p style="margin:0;font-weight:600;color:var(--muted)">Dans le menu du navigateur (⋮), choisis <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.</p>`) + `</div>`;
   }
-  $("#v-profile").innerHTML = `
+  const acct = !sb ? "" : user
+    ? `<div class="panel"><h3>👤 Mon compte</h3>
+        <div class="row"><span>Pseudo</span><b>${esc(profile ? profile.pseudo : "—")}</b></div>
+        <div class="row"><span>E-mail</span><span class="muted" style="overflow:hidden;text-overflow:ellipsis">${esc(user.email || "")}</span></div>
+        <div class="row"><span>☁️ Progression sauvegardée</span><span>✅</span></div>
+        <button class="btn ghost" id="logout" style="margin-top:8px">Se déconnecter</button></div>`
+    : `<div class="panel"><h3>👤 Compte</h3><p class="muted" style="margin-bottom:12px">Sans compte, ta progression reste sur ce téléphone. Avec un compte, elle est sauvegardée et tu entres dans le classement.</p>
+        <button class="btn green" id="p-su">Créer un compte</button><button class="btn ghost" id="p-li" style="margin-top:10px">Se connecter</button></div>`;
+  $("#v-profile").innerHTML = acct + `
     <div class="panel"><h3>📊 Statistiques</h3><div class="grid2">
       <div class="kpi"><span>🔥</span><div><b>${S.streak}</b><small>jours de série</small></div></div>
       <div class="kpi"><span>⭐</span><div><b>${S.xp}</b><small>XP au total</small></div></div>
@@ -216,7 +380,9 @@ function renderProfile() {
       <div class="row"><span>🔊 Sons</span><button class="switch ${S.sound ? "on" : ""}" id="sw-sound" aria-label="Sons"></button></div>
       <div class="row"><span>♻️ Réinitialiser la progression</span><button class="btn red" style="width:auto;padding:8px 12px;font-size:13px" id="reset">Effacer</button></div>
     </div>
-    <p style="text-align:center;color:var(--muted);font-size:12px;font-weight:600">Ta progression est enregistrée sur cet appareil.</p>`;
+    <p style="text-align:center;color:var(--muted);font-size:12px;font-weight:600">${user ? "Ta progression est sauvegardée dans ton compte." : "Ta progression est enregistrée sur cet appareil."}</p>`;
+  if ($("#logout")) $("#logout").onclick = logout;
+  if ($("#p-su")) { $("#p-su").onclick = () => authSheet("signup"); $("#p-li").onclick = () => authSheet("login"); }
   $("#sw-sound").onclick = () => { S.sound = !S.sound; save(); renderProfile(); sfx.tap(); };
   $("#reset").onclick = () => {
     openSheet(`<h2>Tout effacer ?</h2><p style="margin:0;font-weight:600;color:var(--muted)">Ton XP, ta série et tes leçons réussies seront supprimés. Impossible d'annuler.</p>
@@ -235,8 +401,8 @@ function renderAll() {
   refreshTime();
   renderStats();
   $$(".nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
-  ["path", "practice", "profile"].forEach(t => $("#v-" + t).hidden = t !== tab);
-  if (tab === "path") renderPath(); else if (tab === "practice") renderPractice(); else renderProfile();
+  ["path", "practice", "board", "profile"].forEach(t => $("#v-" + t).hidden = t !== tab);
+  if (tab === "path") renderPath(); else if (tab === "practice") renderPractice(); else if (tab === "board") renderBoard(); else renderProfile();
 }
 
 /* ---------------- moteur de leçon ---------------- */
@@ -430,7 +596,9 @@ function finishLesson() {
     S.done[nd.key] = true;
     if (first && nd.ni === 2) extra = `<p>🏆 Unité « ${COURSE[nd.ui].title} » terminée !</p>`;
   } else if (S.hearts < MAX_HEARTS) { S.hearts++; extra = `<p>❤️ +1 cœur récupéré</p>`; }
+  if (user) S.pendingXp = (S.pendingXp || 0) + xp;
   save();
+  syncNow();
   const goalJustDone = S.daily.xp >= DAILY_GOAL && S.daily.xp - xp < DAILY_GOAL;
   const titles = perfect ? ["Leçon parfaite !", "Sans faute !"] : ["Leçon terminée !", "Bien joué !"];
   $("#result").innerHTML = `
@@ -468,6 +636,12 @@ function confetti() {
 
 /* ---------------- démarrage ---------------- */
 renderAll();
+(async () => {
+  try {
+    await loadAccount();
+    if (user) { await pullProgress(false); if (!profile) pseudoSheet(); await flushXp(); if (!L) renderAll(); }
+  } catch {}
+})();
 setTimeout(() => { const c = $(".node.current"); if (c && currentNode() > 2) c.scrollIntoView({ block: "center" }); }, 50);
 setInterval(() => { if ($("#s-home").classList.contains("on")) { refreshTime(); renderStats(); } }, 60000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && $("#s-home").classList.contains("on")) renderAll(); });

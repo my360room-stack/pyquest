@@ -145,6 +145,24 @@ canvas#confetti{position:absolute;inset:0;pointer-events:none;z-index:50}
 .day i{display:block;margin:6px auto 0;width:30px;height:30px;border-radius:50%;background:var(--line);line-height:30px;font-style:normal}
 .day.ok i{background:#fed7aa}
 
+/* comptes & classement */
+.muted{color:var(--muted);font-weight:600;margin:0}
+.form{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.form label{display:flex;flex-direction:column;gap:6px;font-weight:800;font-size:14px}
+.form input{border:2px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;background:var(--bg);color:var(--ink);outline:none;font-family:inherit}
+.form input:focus{border-color:var(--blue)}
+.ferr{color:var(--red);font-weight:700;font-size:14px;min-height:1px}
+.form .btn{margin-top:4px}
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 8px;border-top:1px solid var(--line);font-weight:800}
+.lb-row:first-child{border-top:none}
+.lb-row .rk{width:32px;text-align:center;font-size:17px;color:var(--muted)}
+.lb-row .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:16px;flex:none}
+.lb-row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-row .pts{color:#ca8a04}
+.lb-row.me{background:#eff6ff;border-radius:12px;border-top-color:transparent}
+.lb-gap{text-align:center;color:var(--muted);font-weight:900;padding:2px}
+@media (prefers-color-scheme:dark){.lb-row.me{background:#172554}}
+
 /* modale */
 .modal{position:absolute;inset:0;background:rgba(15,23,42,.5);display:none;align-items:flex-end;z-index:40}
 .modal.on{display:flex}
@@ -186,10 +204,12 @@ canvas#confetti{position:absolute;inset:0;pointer-events:none;z-index:50}
     </header>
     <div class="scroll" id="v-path"></div>
     <div class="scroll" id="v-practice" hidden></div>
+    <div class="scroll" id="v-board" hidden></div>
     <div class="scroll" id="v-profile" hidden></div>
     <nav class="nav">
       <button class="on" data-tab="path"><span>🗺️</span>Parcours</button>
-      <button data-tab="practice"><span>🏋️</span>Entraînement</button>
+      <button data-tab="practice"><span>🏋️</span>Entraîner</button>
+      <button data-tab="board"><span>🏆</span>Classement</button>
       <button data-tab="profile"><span>👤</span>Profil</button>
     </nav>
   </section>
@@ -219,6 +239,8 @@ canvas#confetti{position:absolute;inset:0;pointer-events:none;z-index:50}
 </div>
 
 <script src="lessons.js"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

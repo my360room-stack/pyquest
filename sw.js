@@ -1,6 +1,6 @@
-﻿// Service worker : permet d'utiliser l'app hors connexion.
-const CACHE = "pyquest-v2";
-const FILES = ["./", "index.html", "app.js", "lessons.js", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
+// Service worker : permet d'utiliser l'app hors connexion.
+const CACHE = "pyquest-v3";
+const FILES = ["./", "index.html", "app.js", "lessons.js", "config.js", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

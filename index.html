@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>PyQuest — apprends Python</title>
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PyQuest">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#f7f9fc; --card:#fff; --ink:#1e293b; --muted:#64748b; --line:#e2e8f0;
+  --blue:#2563eb; --blue-d:#1d4ed8; --yellow:#facc15; --green:#22c55e; --green-d:#16a34a;
+  --red:#ef4444; --red-d:#dc2626; --code:#0f172a;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  touch-action:manipulation;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+code,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace}
+#app{max-width:560px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.screen{flex:1;display:none;flex-direction:column;min-height:0}
+.screen.on{display:flex}
+
+/* barre du haut */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:calc(10px + var(--safe-t)) 16px 10px;background:var(--card);border-bottom:2px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:20px;color:var(--blue)}
+.brand svg{width:34px;height:34px}
+.stats{display:flex;gap:14px;font-weight:800;font-size:16px}
+.stat{display:flex;align-items:center;gap:4px}
+.stat.fire{color:#f97316}.stat.xp{color:#ca8a04}.stat.heart{color:var(--red)}
+.stat.dim{filter:grayscale(1);opacity:.5}
+
+/* parcours */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 24px}
+.goal{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.goal .bar{flex:1;height:14px;background:var(--line);border-radius:99px;overflow:hidden}
+.goal .bar i{display:block;height:100%;background:var(--yellow);border-radius:99px;transition:width .5s}
+.goal small{color:var(--muted);font-weight:700}
+.unit{margin-bottom:26px}
+.unit-head{border-radius:18px;padding:14px 16px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 4px 0 rgba(0,0,0,.18)}
+.unit-head h2{margin:0;font-size:18px}
+.unit-head p{margin:2px 0 0;opacity:.9;font-size:13px;font-weight:600}
+.unit-head button{background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.5);border-radius:12px;padding:8px 10px;color:#fff;font-weight:800;font-size:13px;white-space:nowrap}
+.unit.locked .unit-head{filter:grayscale(1);opacity:.55}
+.path{display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px 0 4px}
+.node{width:76px;height:70px;border-radius:50%;border:none;font-size:30px;display:grid;place-items:center;position:relative;
+  box-shadow:0 7px 0 var(--sh);background:var(--bg-n);color:#fff;transition:transform .08s}
+.node:active{transform:translateY(5px);box-shadow:0 2px 0 var(--sh)}
+.node.locked{--bg-n:#e5e7eb;--sh:#cbd5e1;color:#94a3b8}
+.node.done::after{content:"✓";position:absolute;right:-4px;bottom:-4px;background:var(--yellow);color:#78350f;width:26px;height:26px;border-radius:50%;font-size:15px;font-weight:900;display:grid;place-items:center;border:3px solid var(--bg)}
+.node.current{animation:bob 1.6s ease-in-out infinite}
+.node.current::before{content:"GO";position:absolute;top:-30px;background:var(--card);color:var(--ink);border:2px solid var(--line);font-size:12px;font-weight:900;padding:3px 9px;border-radius:9px}
+@keyframes bob{50%{transform:translateY(-5px)}}
+.nwrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.node-label{font-size:12px;font-weight:700;color:var(--muted)}
+
+/* nav du bas */
+.nav{display:flex;border-top:2px solid var(--line);background:var(--card);padding-bottom:var(--safe-b)}
+.nav button{flex:1;border:none;background:none;padding:10px 0 8px;font-size:12px;font-weight:800;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+.nav button span{font-size:24px;line-height:1}
+.nav button.on{color:var(--blue)}
+
+/* leçon */
+.lesson-top{display:flex;align-items:center;gap:12px;padding:calc(14px + var(--safe-t)) 16px 8px}
+.x{border:none;background:none;font-size:26px;color:var(--muted);padding:4px 6px;line-height:1}
+.prog{flex:1;height:16px;background:var(--line);border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--green);border-radius:99px;transition:width .4s;box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)}
+.ex{flex:1;overflow-y:auto;padding:12px 18px 20px}
+.ex h3{font-size:21px;margin:6px 0 14px;line-height:1.3}
+.tag{display:inline-block;font-size:12px;font-weight:900;color:var(--blue);text-transform:uppercase;letter-spacing:.06em}
+.tag.retry{color:#ea580c}
+pre.code{background:var(--code);color:#e2e8f0;border-radius:14px;padding:14px 16px;margin:0 0 16px;font-size:15px;line-height:1.55;overflow-x:auto;white-space:pre}
+.kw{color:#c084fc}.bi{color:#60a5fa}.st{color:#86efac}.nu{color:#fbbf24}.cm{color:#94a3b8;font-style:italic}
+.choices{display:flex;flex-direction:column;gap:10px}
+.choice{text-align:left;background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:14px;padding:14px 16px;font-size:16px;font-weight:600;white-space:pre-line;transition:transform .05s}
+.choice:active{transform:translateY(2px)}
+.choice.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.choice.sel{border-color:var(--blue);background:#eff6ff;color:var(--blue-d)}
+.choice.good{border-color:var(--green);background:#f0fdf4}
+.choice.bad{border-color:var(--red);background:#fef2f2}
+.blank{display:inline-block;min-width:3.2em;padding:0 6px;border-bottom:3px solid #94a3b8;color:var(--yellow);text-align:center;cursor:pointer}
+.blank.filled{background:#1e3a8a;border-radius:6px;border-bottom-color:var(--yellow)}
+.bank{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding-top:6px}
+.tok{background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:12px;padding:10px 14px;font-size:16px;font-weight:700;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;white-space:pre}
+.tok.used{visibility:hidden}
+.answer-zone{min-height:64px;border:2px dashed #cbd5e1;border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.answer-zone:empty::before{content:"Touche les lignes dans le bon ordre";color:#94a3b8;font-size:14px;font-weight:600;padding:10px 6px}
+.answer-zone .tok,.pool .tok{text-align:left;width:100%}
+.answer-zone .tok{background:#eff6ff;border-color:#bfdbfe}
+.pool{display:flex;flex-direction:column;gap:8px}
+textarea.type{width:100%;min-height:96px;border:2px solid var(--line);border-radius:14px;padding:14px;font-size:17px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;resize:none;background:var(--card);color:var(--ink);outline:none}
+textarea.type:focus{border-color:var(--blue)}
+.hint{color:var(--muted);font-size:14px;margin-top:8px;font-weight:600}
+
+/* bas de leçon + feedback */
+.footer{padding:14px 18px calc(14px + var(--safe-b));border-top:2px solid var(--line);background:var(--card);transition:background .2s}
+.footer.good{background:#dcfce7;border-color:#bbf7d0}
+.footer.bad{background:#fee2e2;border-color:#fecaca}
+.fb{display:none;margin-bottom:12px}
+.footer.good .fb,.footer.bad .fb{display:block}
+.fb b{font-size:20px;display:block;margin-bottom:4px}
+.footer.good .fb b{color:var(--green-d)}.footer.bad .fb b{color:var(--red-d)}
+.fb .sol{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;white-space:pre-wrap;font-weight:700;color:#7f1d1d;font-size:15px}
+.fb .why{font-size:14px;margin-top:4px;color:#334155;font-weight:600}
+.btn{width:100%;border:none;border-radius:16px;padding:15px;font-size:17px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--blue);box-shadow:0 5px 0 var(--blue-d);transition:transform .05s}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--blue-d)}
+.btn:disabled{background:#e2e8f0;color:#94a3b8;box-shadow:0 5px 0 #cbd5e1}
+.btn.green{background:var(--green);box-shadow:0 5px 0 var(--green-d)}
+.btn.red{background:var(--red);box-shadow:0 5px 0 var(--red-d)}
+.btn.ghost{background:none;color:var(--blue);box-shadow:none;border:2px solid var(--line)}
+
+/* résultats */
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:10px}
+.center h1{margin:4px 0;font-size:28px}
+.center p{margin:0;color:var(--muted);font-weight:600}
+.mascot-big{width:140px;height:140px}
+.cards{display:flex;gap:10px;margin:18px 0;width:100%;max-width:380px}
+.rc{flex:1;border-radius:14px;border:2px solid var(--c);overflow:hidden}
+.rc small{display:block;background:var(--c);color:#fff;font-weight:900;font-size:11px;padding:5px;text-transform:uppercase}
+.rc div{padding:10px 4px;font-weight:900;font-size:20px;color:var(--c)}
+.result-actions{width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px;padding-bottom:var(--safe-b)}
+canvas#confetti{position:absolute;inset:0;pointer-events:none;z-index:50}
+
+/* profil */
+.panel{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+.panel h3{margin:0 0 10px;font-size:17px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{border:2px solid var(--line);border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px}
+.kpi span{font-size:26px}.kpi b{display:block;font-size:20px}.kpi small{color:var(--muted);font-weight:700}
+.row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-weight:700}
+.row:first-of-type{border-top:none}
+.switch{width:52px;height:30px;border-radius:99px;border:none;background:#cbd5e1;position:relative}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s}
+.switch.on{background:var(--green)}.switch.on::after{left:25px}
+.week{display:flex;justify-content:space-between;gap:6px}
+.day{flex:1;text-align:center;font-size:12px;font-weight:800;color:var(--muted)}
+.day i{display:block;margin:6px auto 0;width:30px;height:30px;border-radius:50%;background:var(--line);line-height:30px;font-style:normal}
+.day.ok i{background:#fed7aa}
+
+/* modale */
+.modal{position:absolute;inset:0;background:rgba(15,23,42,.5);display:none;align-items:flex-end;z-index:40}
+.modal.on{display:flex}
+.sheet{background:var(--card);width:100%;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + var(--safe-b));max-height:85%;overflow-y:auto;animation:up .25s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet h2{margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.sheet .tipbody{font-size:16px;line-height:1.6}
+.sheet .tipbody code{background:#f1f5f9;padding:2px 6px;border-radius:6px;font-size:14px}
+.sheet .btn{margin-top:18px}
+.toast{position:absolute;left:50%;top:calc(70px + var(--safe-t));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;z-index:60;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1}
+.shake{animation:shake .35s}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0b1220;--card:#111a2e;--ink:#e2e8f0;--muted:#94a3b8;--line:#1f2a44;--code:#020617}
+  .choice.sel{background:#172554;color:#93c5fd}.choice.good{background:#052e16}.choice.bad{background:#450a0a}
+  .answer-zone .tok{background:#172554;border-color:#1e3a8a}
+  .footer.good{background:#052e16;border-color:#14532d}.footer.bad{background:#450a0a;border-color:#7f1d1d}
+  .fb .sol{color:#fecaca}.fb .why{color:#cbd5e1}
+  .sheet .tipbody code{background:#1e293b}
+  .btn:disabled{background:#1e293b;color:#475569;box-shadow:0 5px 0 #0f172a}
+  .node.locked{--bg-n:#1f2a44;--sh:#0f172a;color:#475569}
+  .day.ok i{background:#7c2d12}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ACCUEIL / PARCOURS -->
+  <section class="screen on" id="s-home">
+    <header class="topbar">
+      <div class="brand"><svg viewBox="0 0 100 100" data-mascot></svg>PyQuest</div>
+      <div class="stats">
+        <div class="stat fire" id="st-streak">🔥 0</div>
+        <div class="stat xp" id="st-xp">⭐ 0</div>
+        <div class="stat heart" id="st-hearts">❤️ 5</div>
+      </div>
+    </header>
+    <div class="scroll" id="v-path"></div>
+    <div class="scroll" id="v-practice" hidden></div>
+    <div class="scroll" id="v-profile" hidden></div>
+    <nav class="nav">
+      <button class="on" data-tab="path"><span>🗺️</span>Parcours</button>
+      <button data-tab="practice"><span>🏋️</span>Entraînement</button>
+      <button data-tab="profile"><span>👤</span>Profil</button>
+    </nav>
+  </section>
+
+  <!-- LEÇON -->
+  <section class="screen" id="s-lesson">
+    <div class="lesson-top">
+      <button class="x" id="quit" aria-label="Quitter">✕</button>
+      <div class="prog"><i id="prog"></i></div>
+      <div class="stat heart" id="ls-hearts">❤️ 5</div>
+    </div>
+    <div class="ex" id="ex"></div>
+    <div class="footer" id="footer">
+      <div class="fb" id="fb"></div>
+      <button class="btn" id="check" disabled>Vérifier</button>
+    </div>
+  </section>
+
+  <!-- RÉSULTATS -->
+  <section class="screen" id="s-result">
+    <div class="center" id="result"></div>
+  </section>
+
+  <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+  <div class="toast" id="toast"></div>
+  <canvas id="confetti"></canvas>
+</div>
+
+<script src="lessons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
